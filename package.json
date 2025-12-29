@@ -23,7 +23,7 @@
   "scripts": {
     "build": "tsc",
     "format-skir": "cd e2e-test && skir format && cd ..",
-    "format-skir:check": "cd e2e-test && skir format check && cd ..",
+    "format-skir:check": "cd e2e-test && skir format --ci && cd ..",
     "format-kotlin": "cd e2e-test && ./gradlew ktlintFormat && cd ..",
     "format-kotlin:check": "cd e2e-test && ./gradlew ktlintCheck && cd ..",
     "format": "prettier --write \"**/*.ts\" && npm run format-skir && npm run format-kotlin",
