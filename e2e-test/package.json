@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "skirc": "skirc"
-  },
-  "devDependencies": {
-    "skirc": "^1.0.17"
-  }
-}
