@@ -1,26 +1,27 @@
 [![npm](https://img.shields.io/npm/v/skir-kotlin-gen)](https://www.npmjs.com/package/skir-kotlin-gen)
 [![build](https://github.com/gepheum/skir-kotlin-gen/workflows/Build/badge.svg)](https://github.com/gepheum/skir-kotlin-gen/actions)
 
-# Soia's Kotlin code generator
+# Skir's Kotlin code generator
 
 Official plugin for generating Kotlin code from [.skir](https://github.com/gepheum/skir) files.
 
-## Installation
-
-From your project's root directory, run `npm i --save-dev skir-kotlin-gen`.
+## Set up
 
 In your `skir.yml` file, add the following snippet under `generators`:
 ```yaml
   - mod: skir-kotlin-gen
+    outDir: ./src/main/kotlin/skirout
     config: {}
+    # Alternatively:
+    # outDir: ./src/main/kotlin/my/project/skirout
+    # config:
+    #   packagePrefix: my.project.
 ```
-
-The `npm run skirc` command will now generate .kt files within the `skirout` directory.
 
 The generated Kotlin code has a runtime dependency on `build.skir:skir-client`. Add this line to your `build.gradle.kts` file in the `dependencies` section:
 
 ```kotlin
-implementation("build.skir:skir-client:1.1.4")  // Pick the latest version
+implementation("build.skir:skir-client:0.0.6")  // Pick the latest version
 ```
 
 For more information, see this Kotlin project [example](https://github.com/gepheum/skir-kotlin-example).
@@ -197,17 +198,17 @@ greet(lyla)
 
 ### Enum classes
 
-Soia generates a deeply immutable Kotlin class for every enum in the .skir file. This class is *not* a Kotlin enum, although the syntax for referring to constants is similar.
+Skir generates a deeply immutable Kotlin class for every enum in the .skir file. This class is *not* a Kotlin enum, although the syntax for referring to constants is similar.
 
 ```kotlin
 val someStatuses =
     listOf(
-        // The UNKNOWN constant is present in all Soia enums even if it is not
+        // The UNKNOWN constant is present in all Skir enums even if it is not
         // declared in the .skir file.
         SubscriptionStatus.UNKNOWN,
         SubscriptionStatus.FREE,
         SubscriptionStatus.PREMIUM,
-        // Soia generates one subclass {VariantName}Wrapper for every wrapper
+        // Skir generates one subclass {VariantName}Wrapper for every wrapper
         // variant. The constructor of this subclass expects the value to
         // wrap.
         SubscriptionStatus.TrialWrapper(
@@ -287,7 +288,7 @@ println(serializer.toJsonCode(john, JsonFlavor.READABLE))
 // }
 
 // The dense JSON flavor is the flavor you should pick if you intend to
-// deserialize the value in the future. Soia allows fields to be renamed,
+// deserialize the value in the future. Skir allows fields to be renamed,
 // and because field names are not part of the dense JSON, renaming a field
 // does not prevent you from deserializing the value.
 // You should pick the readable flavor mostly for debugging purposes.
@@ -371,8 +372,8 @@ assert(userRegistry.users.findByKey(100) == null)
 ### Frozen lists and copies
 
 ```kotlin
-// Since all Soia objects are deeply immutable, all lists contained in a
-// Soia object are also deeply immutable.
+// Since all Skir objects are deeply immutable, all lists contained in a
+// Skir object are also deeply immutable.
 // This section helps understand when lists are copied and when they are
 // not.
 val pets: MutableList<Pet> =
@@ -385,7 +386,7 @@ val jade =
     User.partial(
         name = "Jade",
         pets = pets,
-        // ^ 'pets' is mutable, so Soia makes an immutable shallow copy of it
+        // ^ 'pets' is mutable, so Skir makes an immutable shallow copy of it
     )
 
 assert(pets == jade.pets)
@@ -395,13 +396,13 @@ val jack =
     User.partial(
         name = "Jack",
         pets = jade.pets,
-        // ^ 'jade.pets' is already immutable, so Soia does not make a copy
+        // ^ 'jade.pets' is already immutable, so Skir does not make a copy
     )
 
 assert(jack.pets === jade.pets)
 ```
 
-### Soia services
+### Skir services
 
 #### Starting a skir service on an HTTP server
 
@@ -434,7 +435,7 @@ assert(typeDescriptor is StructDescriptor)
 assert((typeDescriptor as StructDescriptor).fields.size == 5)
 
 // The 'allStringsToUpperCase' function uses reflection to convert all the
-// strings contained in a given Soia value to upper case.
+// strings contained in a given Skir value to upper case.
 // See the implementation at
 // https://github.com/gepheum/skir-kotlin-example/blob/main/src/main/kotlin/AllStringsToUpperCase.kt
 println(allStringsToUpperCase(TARZAN, User.typeDescriptor))
@@ -462,7 +463,7 @@ println(allStringsToUpperCase(TARZAN, User.typeDescriptor))
 
 ## Java codegen versus Kotlin codegen
 
-While Java and Kotlin code can interoperate seamlessly, Soia provides separate code generators for each language to leverage their unique strengths and idioms. For instance, the Kotlin generator utilizes named parameters for struct construction, whereas the Java generator employs the builder pattern. 
+While Java and Kotlin code can interoperate seamlessly, skir provides separate code generators for each language to leverage their unique strengths and idioms. For instance, the Kotlin generator utilizes named parameters for struct construction, whereas the Java generator employs the builder pattern. 
 
 Although it's technically feasible to use Kotlin-generated code in a Java project (or vice versa), doing so results in an API that feels unnatural and cumbersome in the calling language. For the best developer experience, use the code generator that matches your project's primary language.
 
