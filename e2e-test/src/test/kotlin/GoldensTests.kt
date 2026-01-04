@@ -461,10 +461,10 @@ class GoldensTests {
                     (literal as TypedValue.Int64Wrapper).value,
                     Serializers.int64,
                 )
-            TypedValue.Kind.UINT64_WRAPPER ->
+            TypedValue.Kind.HASH64_WRAPPER ->
                 TypedValueType(
-                    (literal as TypedValue.Uint64Wrapper).value,
-                    Serializers.uint64,
+                    (literal as TypedValue.Hash64Wrapper).value,
+                    Serializers.hash64,
                 )
             TypedValue.Kind.FLOAT32_WRAPPER ->
                 TypedValueType(

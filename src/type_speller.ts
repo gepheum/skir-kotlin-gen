@@ -143,7 +143,7 @@ export class TypeSpeller {
             return "kotlin.Int";
           case "int64":
             return "kotlin.Long";
-          case "uint64":
+          case "hash64":
             return "kotlin.ULong";
           case "float32":
             return "kotlin.Float";
@@ -175,8 +175,8 @@ export class TypeSpeller {
             return "build.skir.Serializers.int32";
           case "int64":
             return "build.skir.Serializers.int64";
-          case "uint64":
-            return "build.skir.Serializers.uint64";
+          case "hash64":
+            return "build.skir.Serializers.hash64";
           case "float32":
             return "build.skir.Serializers.float32";
           case "float64":

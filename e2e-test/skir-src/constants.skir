@@ -45,7 +45,7 @@ const NEGATIVE_INFINITY: float32 = "-Infinity";
 const NAN: float64 = "NaN";
 
 const LARGE_INT64: int64 = 9223372036854775807;
-const LARGE_UINT64: uint64 = 18446744073709551615;
+const LARGE_HASH64: hash64 = 18446744073709551615;
 
 const B: bool = false;
 

@@ -692,7 +692,7 @@ class KotlinSourceFileGenerator {
           return JSON.stringify(valueAsDenseJson);
         case "int64":
           return `${valueAsDenseJson}L`;
-        case "uint64":
+        case "hash64":
           return `${valueAsDenseJson}UL`;
         case "float32": {
           if (valueAsDenseJson === "NaN") {
@@ -750,7 +750,7 @@ class KotlinSourceFileGenerator {
             return "false";
           case "int32":
           case "int64":
-          case "uint64":
+          case "hash64":
             return "0";
           case "float32":
             return "0.0f";
