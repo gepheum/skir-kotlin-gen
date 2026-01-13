@@ -21,7 +21,7 @@ In your `skir.yml` file, add the following snippet under `generators`:
 The generated Kotlin code has a runtime dependency on `build.skir:skir-client`. Add this line to your `build.gradle.kts` file in the `dependencies` section:
 
 ```kotlin
-implementation("build.skir:skir-client:0.1.0")  // Pick the latest version
+implementation("build.skir:skir-client:latest.release")
 ```
 
 For more information, see this Kotlin project [example](https://github.com/gepheum/skir-kotlin-example).

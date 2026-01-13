@@ -1189,7 +1189,7 @@ class ServiceImpl {
     }
 
     val service by lazy {
-        Service.builder()
+        Service.Builder<HttpHeaders>()
             .addMethod(skirout.methods.MyProcedure) { req, reqMeta -> myProcedure(req, reqMeta) }
             .build()
     }
