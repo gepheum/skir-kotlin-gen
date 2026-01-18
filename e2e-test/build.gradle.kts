@@ -18,7 +18,7 @@ repositories {
 
 dependencies {
     implementation("com.squareup.okio:okio:3.6.0")
-    implementation("build.skir:skir-client:1.0.1")
+    implementation("build.skir:skir-client:1.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")

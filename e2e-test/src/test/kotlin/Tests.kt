@@ -839,7 +839,7 @@ class Tests {
             assertThat(
                 field.name,
             ).isEqualTo(
-                "?",
+                "UNKNOWN",
             )
             assertThat(
                 field.number,
