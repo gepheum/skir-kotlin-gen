@@ -33,7 +33,10 @@ class KotlinCodeGenerator implements CodeGenerator<Config> {
     const outputFiles: CodeGenerator.OutputFile[] = [];
     for (const module of input.modules) {
       outputFiles.push({
-        path: module.path.replace(/\.skir$/, ".kt"),
+        path: module.path
+          .replace(/^@/, "external/")
+          .replace(/-/g, "_")
+          .replace(/\.skir$/, ".kt"),
         code: new KotlinSourceFileGenerator(
           module,
           recordMap,
@@ -78,7 +81,11 @@ class KotlinSourceFileGenerator {
 
       `,
       `package ${this.packagePrefix}skirout.`,
-      this.inModule.path.replace(/\.skir$/, "").replace("/", "."),
+      this.inModule.path
+        .replace(/\.skir$/, "")
+        .replace(/^@/, "external/")
+        .replace(/-/g, "_")
+        .replace(/\//g, "."),
       ";\n\n",
       "import build.skir.internal.MustNameArguments as _MustNameArguments;\n",
       "import build.skir.internal.UnrecognizedFields as _UnrecognizedFields;\n",
@@ -749,9 +756,11 @@ class KotlinSourceFileGenerator {
           case "bool":
             return "false";
           case "int32":
-          case "int64":
-          case "hash64":
             return "0";
+          case "int64":
+            return "0L";
+          case "hash64":
+            return "0UL";
           case "float32":
             return "0.0f";
           case "float64":

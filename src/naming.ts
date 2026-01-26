@@ -45,7 +45,11 @@ export class Namer {
     const name = parts.at(-1)!;
 
     const path = record.modulePath;
-    const importPath = path.replace(/\.skir$/, "").replace("/", ".");
+    const importPath = path
+      .replace(/\.skir$/, "")
+      .replace(/^@/, "external/")
+      .replace(/-/g, "_")
+      .replace(/\//g, ".");
     const qualifiedName = `${this.packagePrefix}skirout.${importPath}.${parts.join(".")}`;
 
     return { name, qualifiedName };
