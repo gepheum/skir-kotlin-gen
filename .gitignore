@@ -1,3 +1,4 @@
+.DS_Store
 .gradle
 .idea
 .kotlin
@@ -6,4 +7,5 @@ build
 dist
 node_modules
 skirout
+skir-external
 tsconfig.tsbuildinfo

@@ -6,17 +6,17 @@ import build.skir.reflection.TypeDescriptor
 import okio.ByteString
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import skirout.goldens.Assertion
-import skirout.goldens.BytesExpression
-import skirout.goldens.Color
-import skirout.goldens.KeyedArrays
-import skirout.goldens.MyEnum
-import skirout.goldens.Point
-import skirout.goldens.RecEnum
-import skirout.goldens.RecStruct
-import skirout.goldens.StringExpression
-import skirout.goldens.TypedValue
-import skirout.goldens.UNIT_TESTS
+import skirout.external.gepheum.skir_golden_tests.goldens.Assertion
+import skirout.external.gepheum.skir_golden_tests.goldens.BytesExpression
+import skirout.external.gepheum.skir_golden_tests.goldens.Color
+import skirout.external.gepheum.skir_golden_tests.goldens.KeyedArrays
+import skirout.external.gepheum.skir_golden_tests.goldens.MyEnum
+import skirout.external.gepheum.skir_golden_tests.goldens.Point
+import skirout.external.gepheum.skir_golden_tests.goldens.RecEnum
+import skirout.external.gepheum.skir_golden_tests.goldens.RecStruct
+import skirout.external.gepheum.skir_golden_tests.goldens.StringExpression
+import skirout.external.gepheum.skir_golden_tests.goldens.TypedValue
+import skirout.external.gepheum.skir_golden_tests.goldens.UNIT_TESTS
 
 class AssertionError(
     override val message: String,
