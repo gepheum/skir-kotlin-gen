@@ -406,11 +406,11 @@ assert(jack.pets === jade.pets)
 
 #### Starting a skir service on an HTTP server
 
-Full example [here](https://github.com/gepheum/skir-kotlin-example/blob/main/src/main/kotlin/examples/startservice/StartService.kt).
+Full example [here](https://github.com/gepheum/skir-kotlin-example/blob/main/src/main/kotlin/startservice/StartService.kt).
 
 #### Sending RPCs to a skir service
 
-Full example [here](https://github.com/gepheum/skir-kotlin-example/blob/main/src/main/kotlin/examples/callservice/CallService.kt).
+Full example [here](https://github.com/gepheum/skir-kotlin-example/blob/main/src/main/kotlin/callservice/CallService.kt).
 
 ### Reflection
 
