@@ -268,8 +268,10 @@ Every frozen struct class and enum class has a static `serializer` property whic
 val serializer = User.serializer
 
 // Serialize 'john' to dense JSON.
-println(serializer.toJsonCode(john))
-// [42,"John Doe","Coffee is just a socially acceptable form of rage.",[["Dumbo",1.0,"🐘"]],[1]]
+val johnDenseJson: String = serializer.toJsonCode(john)
+
+println(johnDenseJson)
+// [42,"John Doe",...]
 
 // Serialize 'john' to readable JSON.
 println(serializer.toJsonCode(john, JsonFlavor.READABLE))
@@ -306,8 +308,7 @@ val johnBytes = serializer.toBytes(john)
 
 ```kotlin
 // Use fromJson(), fromJsonCode() and fromBytes() to deserialize.
-val reserializedJohn: User =
-    serializer.fromJsonCode(serializer.toJsonCode(john))
+val reserializedJohn: User = serializer.fromJsonCode(johnDenseJson)
 assert(reserializedJohn.equals(john))
 
 // fromJson/fromJsonCode can deserialize both dense and readable JSON
@@ -317,9 +318,7 @@ val reserializedEvilJohn: User =
     )
 assert(reserializedEvilJohn.equals(evilJohn))
 
-val reserializedJane: User =
-    serializer.fromBytes(serializer.toBytes(jane))
-assert(reserializedJane.equals(jane))
+assert(serializer.fromBytes(johnBytes).equals(john))
 ```
 
 ### Constants
