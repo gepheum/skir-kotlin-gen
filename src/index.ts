@@ -453,14 +453,15 @@ class KotlinSourceFileGenerator {
       'class Unknown @kotlin.Deprecated("For internal use", kotlin.ReplaceWith("',
       qualifiedName,
       '.UNKNOWN")) internal constructor(\n',
-      `internal val _unrecognized: _UnrecognizedVariant<${qualifiedName}>?,\n`,
+      `internal val _kind: Kind,\n`,
+      `internal override val _unrecognized: _UnrecognizedVariant<${qualifiedName}>?,\n`,
       `) : ${qualifiedName}() {\n`,
-      "override val kind get() = Kind.UNKNOWN;\n\n",
+      "override val kind get() = _kind;\n\n",
       "override fun equals(other: kotlin.Any?): kotlin.Boolean {\n",
-      "return other is Unknown;\n",
+      `return other is ${qualifiedName} && other.kind == kind;\n`,
       "}\n\n",
       "override fun hashCode(): kotlin.Int {\n",
-      "return -900601970;\n",
+      "return kind.ordinal;\n",
       "}\n\n",
       "}\n\n", // class Unknown
     );
@@ -471,6 +472,12 @@ class KotlinSourceFileGenerator {
         commentify(docToCommentText(constantVariant.doc)),
         `object ${constantName} : ${qualifiedName}() {\n`,
         `override val kind get() = ${kindExpr};\n\n`,
+        "override fun equals(other: kotlin.Any?): kotlin.Boolean {\n",
+        `return other is ${qualifiedName} && other.kind == ${kindExpr};\n`,
+        "}\n\n",
+        "override fun hashCode(): kotlin.Int {\n",
+        `return ${kindExpr}.ordinal;\n`,
+        "}\n\n",
         "init {\n",
         "_maybeFinalizeSerializer();\n",
         "}\n",
@@ -524,6 +531,7 @@ class KotlinSourceFileGenerator {
     }
 
     this.push(
+      `internal open val _unrecognized: _UnrecognizedVariant<${qualifiedName}>? get() = null;\n\n`,
       "abstract val kind: Kind;\n\n",
       "override fun toString(): kotlin.String {\n",
       "return build.skir.internal.toStringImpl(\n",
@@ -536,7 +544,7 @@ class KotlinSourceFileGenerator {
         `Constant indicating an unknown [${className.name}].`,
         `Default value for fields of type [${className.name}].`,
       ]),
-      'val UNKNOWN = @kotlin.Suppress("DEPRECATION") Unknown(null);\n\n',
+      'val UNKNOWN = @kotlin.Suppress("DEPRECATION") Unknown(Kind.UNKNOWN, null);\n\n',
     );
     for (const wrapperVariant of wrapperVariants) {
       const type = wrapperVariant.type!;
@@ -582,7 +590,7 @@ class KotlinSourceFileGenerator {
       "getKindOrdinal = { it.kind.ordinal },\n",
       "kindCount = Kind.values().size,\n",
       "unknownInstance = UNKNOWN,\n",
-      'wrapUnrecognized = { @kotlin.Suppress("DEPRECATION") Unknown(it) },\n',
+      'wrapUnrecognized = { @kotlin.Suppress("DEPRECATION") Unknown(Kind.UNKNOWN, it) },\n',
       "getUnrecognized = { it._unrecognized },\n)",
       ";\n\n",
       `/** Serializer for [${className.name}] instances. */\n`,
@@ -610,6 +618,8 @@ class KotlinSourceFileGenerator {
         `Kind.${variant.name.text}_CONST.ordinal,\n`,
         `${toKotlinStringLiteral(variant.doc.text)},\n`,
         `${toEnumConstantName(variant)},\n`,
+        `{ @kotlin.Suppress("DEPRECATION") Unknown(Kind.${variant.name.text}_CONST, it) },\n`,
+        `{ it._unrecognized },\n`,
         ");\n",
       );
     }
@@ -629,7 +639,9 @@ class KotlinSourceFileGenerator {
         `${serializerExpression},\n`,
         `${toKotlinStringLiteral(variant.doc.text)},\n`,
         `{ ${wrapperClassName}(it) },\n`,
-        ") { it.value };\n",
+        `{ it.value },\n`,
+        `{ ${this.getDefaultExpression(variant.type!)} },\n`,
+        ");\n",
       );
     }
     for (const removedNumber of record.record.removedNumbers) {

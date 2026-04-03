@@ -9,6 +9,8 @@ import org.junit.jupiter.api.TestFactory
 import skirout.external.gepheum.skir_golden_tests.goldens.Assertion
 import skirout.external.gepheum.skir_golden_tests.goldens.BytesExpression
 import skirout.external.gepheum.skir_golden_tests.goldens.Color
+import skirout.external.gepheum.skir_golden_tests.goldens.EnumA
+import skirout.external.gepheum.skir_golden_tests.goldens.EnumB
 import skirout.external.gepheum.skir_golden_tests.goldens.KeyedArrays
 import skirout.external.gepheum.skir_golden_tests.goldens.MyEnum
 import skirout.external.gepheum.skir_golden_tests.goldens.Point
@@ -125,6 +127,88 @@ class GoldensTests {
             Assertion.Kind.RESERIALIZE_LARGE_ARRAY_WRAPPER -> {
                 val value = (assertion as Assertion.ReserializeLargeArrayWrapper).value
                 reserializeLargeArrayAndVerify(value)
+            }
+            Assertion.Kind.ENUM_A_FROM_JSON_IS_CONSTANT_WRAPPER -> {
+                val value = (assertion as Assertion.EnumAFromJsonIsConstantWrapper).value
+                val jsonString = evaluateString(value.actual)
+                val actual =
+                    if (value.keepUnrecognized) {
+                        fromJsonKeepUnrecognized(EnumA.serializer, jsonString)
+                    } else {
+                        fromJsonDropUnrecognized(EnumA.serializer, jsonString)
+                    }
+                if (actual.kind != EnumA.Kind.A_CONST) {
+                    throw AssertionError(
+                        actual = actual.kind,
+                        expected = EnumA.Kind.A_CONST,
+                        message = "Expected EnumA to be constant A",
+                    )
+                }
+            }
+            Assertion.Kind.ENUM_A_FROM_BYTES_IS_CONSTANT_WRAPPER -> {
+                val value = (assertion as Assertion.EnumAFromBytesIsConstantWrapper).value
+                val bytes = evaluateBytes(value.actual)
+                val actual =
+                    if (value.keepUnrecognized) {
+                        fromBytesKeepUnrecognized(EnumA.serializer, bytes)
+                    } else {
+                        fromBytesDropUnrecognizedFields(EnumA.serializer, bytes)
+                    }
+                if (actual.kind != EnumA.Kind.A_CONST) {
+                    throw AssertionError(
+                        actual = actual.kind,
+                        expected = EnumA.Kind.A_CONST,
+                        message = "Expected EnumA to be constant A",
+                    )
+                }
+            }
+            Assertion.Kind.ENUM_B_FROM_JSON_IS_WRAPPER_B_WRAPPER -> {
+                val value = (assertion as Assertion.EnumBFromJsonIsWrapperBWrapper).value
+                val jsonString = evaluateString(value.actual)
+                val actual =
+                    if (value.keepUnrecognized) {
+                        fromJsonKeepUnrecognized(EnumB.serializer, jsonString)
+                    } else {
+                        fromJsonDropUnrecognized(EnumB.serializer, jsonString)
+                    }
+                if (actual !is EnumB.BWrapper) {
+                    throw AssertionError(
+                        actual = actual.kind,
+                        expected = EnumB.Kind.B_WRAPPER,
+                        message = "Expected EnumB to be wrapper b",
+                    )
+                }
+                if (actual.value != value.expected) {
+                    throw AssertionError(
+                        actual = actual.value,
+                        expected = value.expected,
+                        message = "Expected EnumB.b to wrap the expected string",
+                    )
+                }
+            }
+            Assertion.Kind.ENUM_B_FROM_BYTES_IS_WRAPPER_B_WRAPPER -> {
+                val value = (assertion as Assertion.EnumBFromBytesIsWrapperBWrapper).value
+                val bytes = evaluateBytes(value.actual)
+                val actual =
+                    if (value.keepUnrecognized) {
+                        fromBytesKeepUnrecognized(EnumB.serializer, bytes)
+                    } else {
+                        fromBytesDropUnrecognizedFields(EnumB.serializer, bytes)
+                    }
+                if (actual !is EnumB.BWrapper) {
+                    throw AssertionError(
+                        actual = actual.kind,
+                        expected = EnumB.Kind.B_WRAPPER,
+                        message = "Expected EnumB to be wrapper b",
+                    )
+                }
+                if (actual.value != value.expected) {
+                    throw AssertionError(
+                        actual = actual.value,
+                        expected = value.expected,
+                        message = "Expected EnumB.b to wrap the expected string",
+                    )
+                }
             }
             Assertion.Kind.UNKNOWN -> throw Exception("Unknown assertion kind")
         }
@@ -516,6 +600,16 @@ class GoldensTests {
                     (literal as TypedValue.MyEnumWrapper).value,
                     MyEnum.serializer,
                 )
+            TypedValue.Kind.ENUM_A_WRAPPER ->
+                TypedValueType(
+                    (literal as TypedValue.EnumAWrapper).value,
+                    EnumA.serializer,
+                )
+            TypedValue.Kind.ENUM_B_WRAPPER ->
+                TypedValueType(
+                    (literal as TypedValue.EnumBWrapper).value,
+                    EnumB.serializer,
+                )
             TypedValue.Kind.KEYED_ARRAYS_WRAPPER ->
                 TypedValueType(
                     (literal as TypedValue.KeyedArraysWrapper).value,
@@ -659,6 +753,70 @@ class GoldensTests {
                         evaluateBytes((literal as TypedValue.MyEnumFromBytesDropUnrecognizedWrapper).value),
                     ),
                     MyEnum.serializer,
+                )
+            TypedValue.Kind.ENUM_A_FROM_JSON_KEEP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromJsonKeepUnrecognized(
+                        EnumA.serializer,
+                        evaluateString((literal as TypedValue.EnumAFromJsonKeepUnrecognizedWrapper).value),
+                    ),
+                    EnumA.serializer,
+                )
+            TypedValue.Kind.ENUM_A_FROM_JSON_DROP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromJsonDropUnrecognized(
+                        EnumA.serializer,
+                        evaluateString((literal as TypedValue.EnumAFromJsonDropUnrecognizedWrapper).value),
+                    ),
+                    EnumA.serializer,
+                )
+            TypedValue.Kind.ENUM_A_FROM_BYTES_KEEP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromBytesKeepUnrecognized(
+                        EnumA.serializer,
+                        evaluateBytes((literal as TypedValue.EnumAFromBytesKeepUnrecognizedWrapper).value),
+                    ),
+                    EnumA.serializer,
+                )
+            TypedValue.Kind.ENUM_A_FROM_BYTES_DROP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromBytesDropUnrecognizedFields(
+                        EnumA.serializer,
+                        evaluateBytes((literal as TypedValue.EnumAFromBytesDropUnrecognizedWrapper).value),
+                    ),
+                    EnumA.serializer,
+                )
+            TypedValue.Kind.ENUM_B_FROM_JSON_KEEP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromJsonKeepUnrecognized(
+                        EnumB.serializer,
+                        evaluateString((literal as TypedValue.EnumBFromJsonKeepUnrecognizedWrapper).value),
+                    ),
+                    EnumB.serializer,
+                )
+            TypedValue.Kind.ENUM_B_FROM_JSON_DROP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromJsonDropUnrecognized(
+                        EnumB.serializer,
+                        evaluateString((literal as TypedValue.EnumBFromJsonDropUnrecognizedWrapper).value),
+                    ),
+                    EnumB.serializer,
+                )
+            TypedValue.Kind.ENUM_B_FROM_BYTES_KEEP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromBytesKeepUnrecognized(
+                        EnumB.serializer,
+                        evaluateBytes((literal as TypedValue.EnumBFromBytesKeepUnrecognizedWrapper).value),
+                    ),
+                    EnumB.serializer,
+                )
+            TypedValue.Kind.ENUM_B_FROM_BYTES_DROP_UNRECOGNIZED_WRAPPER ->
+                TypedValueType(
+                    fromBytesDropUnrecognizedFields(
+                        EnumB.serializer,
+                        evaluateBytes((literal as TypedValue.EnumBFromBytesDropUnrecognizedWrapper).value),
+                    ),
+                    EnumB.serializer,
                 )
             TypedValue.Kind.UNKNOWN -> throw Exception("Unknown typed value")
         }
