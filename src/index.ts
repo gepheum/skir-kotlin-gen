@@ -1,7 +1,7 @@
 import {
   type CodeGenerator,
   type Constant,
-  Doc,
+  type Doc,
   type Field,
   type Method,
   type Module,
@@ -640,7 +640,6 @@ class KotlinSourceFileGenerator {
         `${toKotlinStringLiteral(variant.doc.text)},\n`,
         `{ ${wrapperClassName}(it) },\n`,
         `{ it.value },\n`,
-        `{ ${this.getDefaultExpression(variant.type!)} },\n`,
         ");\n",
       );
     }
