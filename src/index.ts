@@ -618,8 +618,6 @@ class KotlinSourceFileGenerator {
         `Kind.${variant.name.text}_CONST.ordinal,\n`,
         `${toKotlinStringLiteral(variant.doc.text)},\n`,
         `${toEnumConstantName(variant)},\n`,
-        `{ @kotlin.Suppress("DEPRECATION") Unknown(Kind.${variant.name.text}_CONST, it) },\n`,
-        `{ it._unrecognized },\n`,
         ");\n",
       );
     }
