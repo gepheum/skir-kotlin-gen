@@ -127,7 +127,7 @@ const GENERATED_STRUCT_SYMBOLS: ReadonlySet<string> = new Set([
 ]);
 
 export function toEnumConstantName(field: Field): string {
-  return field.name.text;
+  return convertCase(field.name.text, "UPPER_UNDERSCORE");
 }
 
 export interface ClassName {
