@@ -440,15 +440,10 @@ class KotlinSourceFileGenerator {
       "UNKNOWN,\n",
     );
     for (const variant of constantVariants) {
-      this.push(
-        `${toEnumConstantName(variant)}_CONST,\n`,
-      );
+      this.push(`${toEnumConstantName(variant)}_CONST,\n`);
     }
     for (const variant of wrapperVariants) {
-      this.push(
-        toEnumConstantName(variant),
-        "_WRAPPER,\n",
-      );
+      this.push(toEnumConstantName(variant), "_WRAPPER,\n");
     }
     this.push(
       "}\n\n",
@@ -629,8 +624,7 @@ class KotlinSourceFileGenerator {
       );
       const wrapperClassName =
         convertCase(variant.name.text, "UpperCamel") + "Wrapper";
-      const kindConstName =
-        toEnumConstantName(variant) + "_WRAPPER";
+      const kindConstName = toEnumConstantName(variant) + "_WRAPPER";
       this.push(
         "_serializerImpl.addWrapperVariant(\n",
         `${variant.number},\n`,
