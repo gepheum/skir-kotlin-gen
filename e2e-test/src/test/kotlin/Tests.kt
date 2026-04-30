@@ -814,7 +814,7 @@ class Tests {
             assertThat(
                 field.name,
             ).isEqualTo(
-                "OK",
+                "ok",
             )
             assertThat(
                 field.number,
@@ -839,7 +839,7 @@ class Tests {
             assertThat(
                 field.name,
             ).isEqualTo(
-                "UNKNOWN",
+                "unknown",
             )
             assertThat(
                 field.number,

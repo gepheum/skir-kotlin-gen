@@ -611,7 +611,7 @@ class KotlinSourceFileGenerator {
       this.push(
         "_serializerImpl.addConstantVariant(\n",
         `${variant.number},\n`,
-        `"${toEnumConstantName(variant)}",\n`,
+        `"${variant.name.text}",\n`,
         `Kind.${toEnumConstantName(variant)}_CONST.ordinal,\n`,
         `${toKotlinStringLiteral(variant.doc.text)},\n`,
         `${toEnumConstantName(variant)},\n`,
