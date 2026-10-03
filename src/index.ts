@@ -108,7 +108,114 @@ class KotlinSourceFileGenerator {
       this.writeConstant(constant);
     }
 
+    this.writeSerializerRegistry();
+
     return this.joinLinesAndFixFormatting();
+  }
+
+  private writeSerializerRegistry(): void {
+    const records = this.inModule.records
+      .slice()
+      .sort((left, right) =>
+        this.namer
+          .getClassName(left)
+          .qualifiedName.localeCompare(
+            this.namer.getClassName(right).qualifiedName,
+          ),
+      );
+    this.push("\nprivate object _SerializerRegistry {\n");
+    for (const record of records) {
+      const { qualifiedName } = this.namer.getClassName(record);
+      const serializerName = this.typeSpeller.getRegistrySerializerName(record);
+      if (record.record.recordType === "struct") {
+        this.push(
+          `val ${serializerName}Impl = build.skir.internal.StructSerializer(\n`,
+          `recordId = "${getRecordId(record)}",\n`,
+          `doc = ${toKotlinStringLiteral(record.record.doc.text)},\n`,
+          `defaultInstance = ${qualifiedName}.partial(),\n`,
+          `newMutableFn = { it?.toMutable() ?: ${qualifiedName}.Mutable() },\n`,
+          "toFrozenFn = { it.toFrozen() },\n",
+          "getUnrecognizedFields = { it._unrecognizedFields },\n",
+          "setUnrecognizedFields = { m, u -> m._unrecognizedFields = u },\n",
+          ");\n\n",
+        );
+      } else {
+        this.push(
+          `val ${serializerName}Impl =\n`,
+          `build.skir.internal.EnumSerializer.create<${qualifiedName}, ${qualifiedName}.Unknown>(\n`,
+          `recordId = "${getRecordId(record)}",\n`,
+          `doc = ${toKotlinStringLiteral(record.record.doc.text)},\n`,
+          "getKindOrdinal = { it.kind.ordinal },\n",
+          `kindCount = ${qualifiedName}.Kind.values().size,\n`,
+          `unknownInstance = ${qualifiedName}.UNKNOWN,\n`,
+          `wrapUnrecognized = { @kotlin.Suppress("DEPRECATION") ${qualifiedName}.Unknown(${qualifiedName}.Kind.UNKNOWN, it) },\n`,
+          "getUnrecognized = { it._unrecognized },\n",
+          ");\n\n",
+        );
+      }
+      this.push(
+        `val ${serializerName} = build.skir.internal.makeSerializer(${serializerName}Impl);\n\n`,
+      );
+    }
+    this.push("init {\n");
+    for (const record of records) {
+      this.writeSerializerFinalization(record);
+    }
+    this.push("}\n", "}\n");
+  }
+
+  private writeSerializerFinalization(record: RecordLocation): void {
+    const { namer, typeSpeller } = this;
+    const { qualifiedName } = namer.getClassName(record);
+    const serializerImpl =
+      typeSpeller.getRegistrySerializerName(record) + "Impl";
+    for (const field of record.record.fields) {
+      if (record.record.recordType === "struct") {
+        const fieldName = namer.structFieldToKotlinName(field);
+        this.push(
+          `${serializerImpl}.addField(\n`,
+          `"${field.name.text}",\n`,
+          `"${fieldName}",\n`,
+          `${field.number},\n`,
+          `${typeSpeller.getSerializerExpression(field.type!, this.inModule.path)},\n`,
+          `${toKotlinStringLiteral(field.doc.text)},\n`,
+          `{ it.${fieldName} },\n`,
+          `{ mut, v -> mut.${fieldName} = v },\n`,
+          ");\n",
+        );
+      } else if (!field.type) {
+        const constantName = toEnumConstantName(field);
+        this.push(
+          `${serializerImpl}.addConstantVariant(\n`,
+          `${field.number},\n`,
+          `"${field.name.text}",\n`,
+          `${qualifiedName}.Kind.${constantName}_CONST.ordinal,\n`,
+          `${toKotlinStringLiteral(field.doc.text)},\n`,
+          `${qualifiedName}.${constantName},\n`,
+          ");\n",
+        );
+      } else {
+        const wrapperClassName =
+          convertCase(field.name.text, "UpperCamel") + "Wrapper";
+        this.push(
+          `${serializerImpl}.addWrapperVariant(\n`,
+          `${field.number},\n`,
+          `"${field.name.text}",\n`,
+          `${qualifiedName}.Kind.${toEnumConstantName(field)}_WRAPPER.ordinal,\n`,
+          `${typeSpeller.getSerializerExpression(field.type, this.inModule.path)},\n`,
+          `${toKotlinStringLiteral(field.doc.text)},\n`,
+          `{ ${qualifiedName}.${wrapperClassName}(it) },\n`,
+          "{ it.value },\n",
+          ");\n",
+        );
+      }
+    }
+    for (const removedNumber of record.record.removedNumbers) {
+      this.push(`${serializerImpl}.addRemovedNumber(${removedNumber});\n`);
+    }
+    this.push(
+      `${serializerImpl}.${record.record.recordType === "struct" ? "finalizeStruct" : "finalizeEnum"}();\n\n`,
+    );
   }
 
   private writeClassesForRecords(
@@ -160,7 +267,7 @@ class KotlinSourceFileGenerator {
       }
     }
     this.push(
-      `private val _unrecognizedFields: _UnrecognizedFields<${qualifiedName}>? =\n`,
+      `internal val _unrecognizedFields: _UnrecognizedFields<${qualifiedName}>? =\n`,
       "null,\n",
       `): ${qualifiedName}_OrMutable {\n`,
     );
@@ -248,7 +355,7 @@ class KotlinSourceFileGenerator {
       "override fun toString(): kotlin.String {\n",
       "return build.skir.internal.toStringImpl(\n",
       "this,\n",
-      `${qualifiedName}.serializerImpl,\n`,
+      `_SerializerRegistry.${typeSpeller.getRegistrySerializerName(struct)}Impl,\n`,
       ")\n",
       "}\n\n",
     );
@@ -324,39 +431,12 @@ class KotlinSourceFileGenerator {
     this.push(
       "_unrecognizedFields = null,\n",
       ");\n\n",
-      "private val serializerImpl = build.skir.internal.StructSerializer(\n",
-      `recordId = "${getRecordId(struct)}",\n`,
-      `doc = ${toKotlinStringLiteral(struct.record.doc.text)},\n`,
-      "defaultInstance = default,\n",
-      "newMutableFn = { it?.toMutable() ?: Mutable() },\n",
-      "toFrozenFn = { it.toFrozen() },\n",
-      "getUnrecognizedFields = { it._unrecognizedFields },\n",
-      "setUnrecognizedFields = { m, u -> m._unrecognizedFields = u },\n",
-      ");\n\n",
       `/** Serializer for [${className.name}] instances. */\n`,
-      "val serializer = build.skir.internal.makeSerializer(serializerImpl);\n\n",
+      `val serializer get() = _SerializerRegistry.${typeSpeller.getRegistrySerializerName(struct)};\n\n`,
       `/** Describes the [${className.name}] type. Provides runtime introspection capabilities. */\n`,
-      "val typeDescriptor get() = serializerImpl.typeDescriptor;\n\n",
-      "init {\n",
+      `val typeDescriptor get() = _SerializerRegistry.${typeSpeller.getRegistrySerializerName(struct)}Impl.typeDescriptor;\n`,
+      "}\n",
     );
-    for (const field of fields) {
-      const fieldName = namer.structFieldToKotlinName(field);
-      this.push(
-        "serializerImpl.addField(\n",
-        `"${field.name.text}",\n`,
-        `"${fieldName}",\n`,
-        `${field.number},\n`,
-        `${typeSpeller.getSerializerExpression(field.type!)},\n`,
-        `${toKotlinStringLiteral(field.doc.text)},\n`,
-        `{ it.${fieldName} },\n`,
-        `{ mut, v -> mut.${fieldName} = v },\n`,
-        ");\n",
-      );
-    }
-    for (const removedNumber of struct.record.removedNumbers) {
-      this.push(`serializerImpl.addRemovedNumber(${removedNumber});\n`);
-    }
-    this.push("serializerImpl.finalizeStruct();\n", "}\n", "}\n");
 
     // Write the classes for the records nested in `record`.
     const nestedRecords = struct.record.nestedRecords.map(
@@ -475,9 +555,6 @@ class KotlinSourceFileGenerator {
         "override fun hashCode(): kotlin.Int {\n",
         `return ${kindExpr}.ordinal;\n`,
         "}\n\n",
-        "init {\n",
-        "_maybeFinalizeSerializer();\n",
-        "}\n",
         `}\n\n`, // object
       );
     }
@@ -533,7 +610,7 @@ class KotlinSourceFileGenerator {
       "override fun toString(): kotlin.String {\n",
       "return build.skir.internal.toStringImpl(\n",
       "this,\n",
-      `${qualifiedName}._serializerImpl,\n`,
+      `_SerializerRegistry.${typeSpeller.getRegistrySerializerName(record)}Impl,\n`,
       ")\n",
       "}\n\n",
       "companion object {\n",
@@ -580,70 +657,10 @@ class KotlinSourceFileGenerator {
       this.push(")\n", ");\n\n");
     }
     this.push(
-      "private val _serializerImpl =\n",
-      `build.skir.internal.EnumSerializer.create<${qualifiedName}, Unknown>(\n`,
-      `recordId = "${getRecordId(record)}",\n`,
-      `doc = ${toKotlinStringLiteral(record.record.doc.text)},\n`,
-      "getKindOrdinal = { it.kind.ordinal },\n",
-      "kindCount = Kind.values().size,\n",
-      "unknownInstance = UNKNOWN,\n",
-      'wrapUnrecognized = { @kotlin.Suppress("DEPRECATION") Unknown(Kind.UNKNOWN, it) },\n',
-      "getUnrecognized = { it._unrecognized },\n)",
-      ";\n\n",
       `/** Serializer for [${className.name}] instances. */\n`,
-      "val serializer = build.skir.internal.makeSerializer(_serializerImpl);\n\n",
+      `val serializer get() = _SerializerRegistry.${typeSpeller.getRegistrySerializerName(record)};\n\n`,
       `/** Describes the [${className.name}] type. Provides runtime introspection capabilities. */\n`,
-      "val typeDescriptor get() = _serializerImpl.typeDescriptor;\n\n",
-      "init {\n",
-    );
-    for (const constantVariant of constantVariants) {
-      this.push(toEnumConstantName(constantVariant), ";\n");
-    }
-    this.push("_maybeFinalizeSerializer();\n");
-    this.push(
-      "}\n\n", // init
-      `private var _finalizationCounter = 0;\n\n`,
-      "private fun _maybeFinalizeSerializer() {\n",
-      "_finalizationCounter += 1;\n",
-      `if (_finalizationCounter == ${constantVariants.length + 1}) {\n`,
-    );
-    for (const variant of constantVariants) {
-      this.push(
-        "_serializerImpl.addConstantVariant(\n",
-        `${variant.number},\n`,
-        `"${variant.name.text}",\n`,
-        `Kind.${toEnumConstantName(variant)}_CONST.ordinal,\n`,
-        `${toKotlinStringLiteral(variant.doc.text)},\n`,
-        `${toEnumConstantName(variant)},\n`,
-        ");\n",
-      );
-    }
-    for (const variant of wrapperVariants) {
-      const serializerExpression = typeSpeller.getSerializerExpression(
-        variant.type!,
-      );
-      const wrapperClassName =
-        convertCase(variant.name.text, "UpperCamel") + "Wrapper";
-      const kindConstName = toEnumConstantName(variant) + "_WRAPPER";
-      this.push(
-        "_serializerImpl.addWrapperVariant(\n",
-        `${variant.number},\n`,
-        `"${variant.name.text}",\n`,
-        `Kind.${kindConstName}.ordinal,\n`,
-        `${serializerExpression},\n`,
-        `${toKotlinStringLiteral(variant.doc.text)},\n`,
-        `{ ${wrapperClassName}(it) },\n`,
-        `{ it.value },\n`,
-        ");\n",
-      );
-    }
-    for (const removedNumber of record.record.removedNumbers) {
-      this.push(`_serializerImpl.addRemovedNumber(${removedNumber});\n`);
-    }
-    this.push(
-      "_serializerImpl.finalizeEnum();\n",
-      "}\n",
-      "}\n", // maybeFinalizeSerializer
+      `val typeDescriptor get() = _SerializerRegistry.${typeSpeller.getRegistrySerializerName(record)}Impl.typeDescriptor;\n`,
       "}\n\n", // companion object
     );
 
@@ -664,6 +681,7 @@ class KotlinSourceFileGenerator {
     );
     const requestSerializerExpr = typeSpeller.getSerializerExpression(
       method.requestType!,
+      null,
     );
     const responseType = typeSpeller.getKotlinType(
       method.responseType!,
@@ -671,6 +689,7 @@ class KotlinSourceFileGenerator {
     );
     const responseSerializerExpr = typeSpeller.getSerializerExpression(
       method.responseType!,
+      null,
     );
     this.push(
       commentify(docToCommentText(method.doc)),
@@ -741,6 +760,7 @@ class KotlinSourceFileGenerator {
     } else {
       const serializerExpression = typeSpeller.getSerializerExpression(
         constant.type!,
+        null,
       );
       const jsonStringLiteral = JSON.stringify(
         JSON.stringify(constant.valueAsDenseJson),

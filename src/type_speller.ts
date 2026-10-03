@@ -165,7 +165,10 @@ export class TypeSpeller {
     return this.namer.getClassName(record);
   }
 
-  getSerializerExpression(type: ResolvedType): string {
+  getSerializerExpression(
+    type: ResolvedType,
+    registryModulePath: string | null,
+  ): string {
     switch (type.kind) {
       case "primitive": {
         switch (type.primitive) {
@@ -199,13 +202,13 @@ export class TypeSpeller {
             .join(".");
           return (
             "build.skir.internal.keyedListSerializer(\n" +
-            this.getSerializerExpression(type.item) +
+            this.getSerializerExpression(type.item, registryModulePath) +
             `,\n"${keyChain}",\n{ it.${path} },\n)`
           );
         } else {
           return (
             "build.skir.Serializers.list(\n" +
-            this.getSerializerExpression(type.item) +
+            this.getSerializerExpression(type.item, registryModulePath) +
             ",\n)"
           );
         }
@@ -213,13 +216,27 @@ export class TypeSpeller {
       case "optional": {
         return (
           `build.skir.Serializers.optional(\n` +
-          this.getSerializerExpression(type.other) +
+          this.getSerializerExpression(type.other, registryModulePath) +
           `,\n)`
         );
       }
       case "record": {
+        const record = this.recordMap.get(type.key)!;
+        if (record.modulePath === registryModulePath) {
+          return `_SerializerRegistry.${this.getRegistrySerializerName(record)}`;
+        }
         return this.getClassName(type.key).qualifiedName + ".serializer";
       }
     }
+  }
+
+  getRegistrySerializerName(record: RecordLocation): string {
+    return (
+      this.namer
+        .getClassName(record)
+        .qualifiedName.split(".")
+        .slice(-record.recordAncestors.length)
+        .join("_") + "Serializer"
+    );
   }
 }

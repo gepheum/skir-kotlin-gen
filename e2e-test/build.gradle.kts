@@ -1,3 +1,5 @@
+import java.time.Duration
+
 plugins {
     kotlin("jvm") version "2.0.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
@@ -25,6 +27,28 @@ dependencies {
     testImplementation("com.google.truth:truth:1.1.5")
 }
 
+val coldSerializerTests =
+    mapOf(
+        "coldSerializerAccess" to "serializer",
+        "coldDescriptorAccess" to "descriptor",
+        "coldEnumAccess" to "enum",
+        "coldToStringAccess" to "string",
+        "coldConcurrentAccess" to "concurrent",
+        "coldFieldAccess" to "field",
+        "coldRecordAccess" to "record",
+        "coldValueAccess" to "value",
+        "coldValueConcurrentAccess" to "valueConcurrent",
+    ).map { (taskName, scenario) ->
+        tasks.register<JavaExec>(taskName) {
+            dependsOn(tasks.testClasses)
+            classpath = sourceSets.test.get().runtimeClasspath
+            mainClass.set("ColdSerializerInitialization")
+            args(scenario)
+            timeout.set(Duration.ofSeconds(20))
+        }
+    }
+
 tasks.test {
+    dependsOn(coldSerializerTests)
     useJUnitPlatform()
 }
