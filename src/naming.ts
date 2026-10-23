@@ -44,15 +44,19 @@ export class Namer {
 
     const name = parts.at(-1)!;
 
-    const path = record.modulePath;
-    const importPath = path
+    const qualifiedName = `${this.modulePackage(record.modulePath)}.${parts.join(".")}`;
+
+    return { name, qualifiedName };
+  }
+
+  /** Returns the package of the Kotlin file generated for the given module. */
+  modulePackage(modulePath: string): string {
+    const importPath = modulePath
       .replace(/\.skir$/, "")
       .replace(/^@/, "external/")
       .replace(/-/g, "_")
       .replace(/\//g, ".");
-    const qualifiedName = `${this.packagePrefix}skirout.${importPath}.${parts.join(".")}`;
-
-    return { name, qualifiedName };
+    return `${this.packagePrefix}skirout.${importPath}`;
   }
 }
 
@@ -128,6 +132,16 @@ const GENERATED_STRUCT_SYMBOLS: ReadonlySet<string> = new Set([
 
 export function toEnumConstantName(field: Field): string {
   return convertCase(field.name.text, "UPPER_UNDERSCORE");
+}
+
+/** Returns the constant of the generated Kind enum for the given variant. */
+export function getKindConstantName(variant: Field): string {
+  return toEnumConstantName(variant) + (variant.type ? "_WRAPPER" : "_CONST");
+}
+
+/** Returns the class generated for the given wrapper variant. */
+export function getWrapperClassName(variant: Field): string {
+  return convertCase(variant.name.text, "UpperCamel") + "Wrapper";
 }
 
 export interface ClassName {
