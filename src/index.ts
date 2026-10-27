@@ -12,7 +12,12 @@ import {
   simpleHash,
 } from "skir-internal";
 import { z } from "zod";
-import { Namer, toEnumConstantName } from "./naming.js";
+import {
+  getKindConstantName,
+  getWrapperClassName,
+  Namer,
+  toEnumConstantName,
+} from "./naming.js";
 import { TypeSpeller } from "./type_speller.js";
 
 const Config = z.strictObject({
@@ -45,6 +50,38 @@ class KotlinCodeGenerator implements CodeGenerator<Config> {
       });
     }
     return { files: outputFiles };
+  }
+
+  symbols(input: CodeGenerator.Input<Config>): CodeGenerator.SymbolProvider {
+    const namer = new Namer(input.config.packagePrefix ?? "");
+    // Fully qualified references compile without imports.
+    const symbol = (reference: string): CodeGenerator.Symbol => ({
+      reference,
+      imports: [],
+    });
+    const record = (location: RecordLocation): string =>
+      namer.getClassName(location).qualifiedName;
+    return {
+      record: (location) => symbol(record(location)),
+      method: (module, method) =>
+        symbol(`${namer.modulePackage(module.path)}.${method.name.text}`),
+      variant: (location, variant) =>
+        symbol(`${record(location)}.Kind.${getKindConstantName(variant)}`),
+      variantConstructor: (location, variant) =>
+        symbol(
+          variant.type
+            ? `${record(location)}.${getWrapperClassName(variant)}({value})`
+            : `${record(location)}.${toEnumConstantName(variant)}`,
+        ),
+      variantValue: (location, variant): CodeGenerator.Symbol => {
+        if (!variant.type) {
+          throw new TypeError(`${variant.name.text} is a constant variant`);
+        }
+        return symbol(
+          `({value} as ${record(location)}.${getWrapperClassName(variant)}).value`,
+        );
+      },
+    };
   }
 }
 
@@ -80,12 +117,7 @@ class KotlinSourceFileGenerator {
       // to your build.gradle.kts file
 
       `,
-      `package ${this.packagePrefix}skirout.`,
-      this.inModule.path
-        .replace(/\.skir$/, "")
-        .replace(/^@/, "external/")
-        .replace(/-/g, "_")
-        .replace(/\//g, "."),
+      `package ${this.namer.modulePackage(this.inModule.path)}`,
       ";\n\n",
       "import build.skir.internal.MustNameArguments as _MustNameArguments;\n",
       "import build.skir.internal.UnrecognizedFields as _UnrecognizedFields;\n",
@@ -189,19 +221,18 @@ class KotlinSourceFileGenerator {
           `${serializerImpl}.addConstantVariant(\n`,
           `${field.number},\n`,
           `"${field.name.text}",\n`,
-          `${qualifiedName}.Kind.${constantName}_CONST.ordinal,\n`,
+          `${qualifiedName}.Kind.${getKindConstantName(field)}.ordinal,\n`,
           `${toKotlinStringLiteral(field.doc.text)},\n`,
           `${qualifiedName}.${constantName},\n`,
           ");\n",
         );
       } else {
-        const wrapperClassName =
-          convertCase(field.name.text, "UpperCamel") + "Wrapper";
+        const wrapperClassName = getWrapperClassName(field);
         this.push(
           `${serializerImpl}.addWrapperVariant(\n`,
           `${field.number},\n`,
           `"${field.name.text}",\n`,
-          `${qualifiedName}.Kind.${toEnumConstantName(field)}_WRAPPER.ordinal,\n`,
+          `${qualifiedName}.Kind.${getKindConstantName(field)}.ordinal,\n`,
           `${typeSpeller.getSerializerExpression(field.type, this.inModule.path)},\n`,
           `${toKotlinStringLiteral(field.doc.text)},\n`,
           `{ ${qualifiedName}.${wrapperClassName}(it) },\n`,
@@ -520,10 +551,10 @@ class KotlinSourceFileGenerator {
       "UNKNOWN,\n",
     );
     for (const variant of constantVariants) {
-      this.push(`${toEnumConstantName(variant)}_CONST,\n`);
+      this.push(`${getKindConstantName(variant)},\n`);
     }
     for (const variant of wrapperVariants) {
-      this.push(toEnumConstantName(variant), "_WRAPPER,\n");
+      this.push(`${getKindConstantName(variant)},\n`);
     }
     this.push(
       "}\n\n",
@@ -543,7 +574,7 @@ class KotlinSourceFileGenerator {
       "}\n\n", // class Unknown
     );
     for (const constantVariant of constantVariants) {
-      const kindExpr = `Kind.${convertCase(constantVariant.name.text, "UPPER_UNDERSCORE")}_CONST`;
+      const kindExpr = `Kind.${getKindConstantName(constantVariant)}`;
       const constantName = toEnumConstantName(constantVariant);
       this.push(
         commentify(docToCommentText(constantVariant.doc)),
@@ -560,8 +591,7 @@ class KotlinSourceFileGenerator {
     }
     for (const wrapperVariant of wrapperVariants) {
       const valueType = wrapperVariant.type!;
-      const wrapperClassName =
-        convertCase(wrapperVariant.name.text, "UpperCamel") + "Wrapper";
+      const wrapperClassName = getWrapperClassName(wrapperVariant);
       const initializerType = typeSpeller
         .getKotlinType(valueType, "initializer")
         .toString();
@@ -586,10 +616,7 @@ class KotlinSourceFileGenerator {
           `): this(${this.toFrozenExpression("value", valueType)}) {}\n\n`,
         );
       }
-      const kindExpr =
-        "Kind." +
-        convertCase(wrapperVariant.name.text, "UPPER_UNDERSCORE") +
-        "_WRAPPER";
+      const kindExpr = `Kind.${getKindConstantName(wrapperVariant)}`;
       this.push(
         `override val kind get() = ${kindExpr};\n\n`,
         "override fun equals(other: kotlin.Any?): kotlin.Boolean {\n",
@@ -633,8 +660,7 @@ class KotlinSourceFileGenerator {
       const structClassName = namer.getClassName(structLocation);
       const createFunName =
         "create" + convertCase(wrapperVariant.name.text, "UpperCamel");
-      const wrapperClassName =
-        convertCase(wrapperVariant.name.text, "UpperCamel") + "Wrapper";
+      const wrapperClassName = getWrapperClassName(wrapperVariant);
       this.push(
         `/** Shortcut for \`${wrapperClassName}(${structClassName.qualifiedName}(...))\`. */
         @kotlin.Suppress("UNUSED_PARAMETER")
